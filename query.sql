@@ -8,4 +8,5 @@ select p.id, p.firstName, p.lastName, rfa.restrictedTo, p.stats.averagePoints fr
 left join rfa on p.id = rfa.playerId
 left join l on p.id = l.lineup
 where p.status = 'playing'
-and l.id is null;
+and l.id is null
+order by p.stats.averagePoints asc;
