@@ -2,7 +2,9 @@
 
 Download data from AFL Fantasy Draft and processes it with DuckDB.
 
-I want to see players with the highest average score that are playing this week but the new UI doesn't let you.
+I want to see the highest performing free agents that are playing this week so I can recruit them.
+
+There's no way to filter by playing status in the new UI but we can pull all the data down and process it ourselves.
 
 ## Quick Start
 
