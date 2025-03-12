@@ -1,4 +1,4 @@
-# Fantasy Duck 🔮🦆
+# Fantasy Duck Sauce 🔮🦆🍅
 
 Download data from AFL Fantasy Draft and processes it with DuckDB.
 
