@@ -14,12 +14,17 @@ LEAGUE=4465 COOKIE= sh run.sh
 
 Other Commands
 ```
-duckdb
-.read playing.sql
+duckdb database.db
+.read players.sql;
+select * from players;
 ```
 ```
-duckdb
-.read returning.sql
+duckdb database.db
+.read playing.sql;
+```
+```
+duckdb database.db
+.read returning.sql;
 ```
 ```
 LEAGUE=4465 COOKIE= sh download.sh
