@@ -13,11 +13,20 @@ LEAGUE=4465 COOKIE= sh run.sh
 ```
 
 Other Commands
-
+```
+duckdb
+.read playing.sql
+```
+```
+duckdb
+.read returning.sql
+```
 ```
 LEAGUE=4465 COOKIE= sh download.sh
-duckdb
-.read query.sql
+```
+```
+npm install
+npm run scrape
 ```
 
 ## Getting Started

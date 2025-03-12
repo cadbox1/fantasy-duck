@@ -1,2 +1,4 @@
 sh download.sh;
-duckdb < query.sql
+npm run scrape;
+duckdb < playing.sql;
+duckdb < returning.sql;
