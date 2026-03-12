@@ -11,12 +11,13 @@ def _():
     import httpx
     import json
     import os
+    import asyncio
     from pathlib import Path
     from playwright.async_api import async_playwright
     from dotenv import load_dotenv
 
     load_dotenv(Path(__file__).parent / ".env")
-    return Path, async_playwright, duckdb, httpx, json, mo, os
+    return Path, async_playwright, asyncio, duckdb, httpx, json, mo, os
 
 
 @app.cell
@@ -45,6 +46,7 @@ def _(mo, os):
 async def _(
     Path,
     async_playwright,
+    asyncio,
     cookie_input,
     duckdb,
     httpx,
@@ -116,8 +118,41 @@ async def _(
         Path("data/injuries.json").write_text(json.dumps(data))
         return len(data)
 
+    async def fetch_last_year_stats(player_ids, batch_size=20):
+        """Fetch 2025 stats for all players concurrently in batches. Skips if data already exists."""
+        stats_dir = Path("data/players/2025")
+        stats_dir.mkdir(parents=True, exist_ok=True)
+
+        # Skip if directory already has files
+        existing_files = list(stats_dir.glob("*.json"))
+        if existing_files:
+            return len(existing_files)
+
+        semaphore = asyncio.Semaphore(batch_size)
+        fetched_count = 0
+
+        async def fetch_player(client: httpx.AsyncClient, player_id: int):
+            nonlocal fetched_count
+            async with semaphore:
+                resp = await client.get(
+                    f"https://fantasy.afl.com.au/json/draft/players_game_stats/2025/{player_id}.json"
+                )
+                if resp.status_code == 200:
+                    (stats_dir / f"{player_id}.json").write_text(resp.text)
+                    fetched_count += 1
+
+        async with httpx.AsyncClient() as client:
+            await asyncio.gather(*[fetch_player(client, pid) for pid in player_ids])
+
+        return fetched_count
+
     players_count, teams_count, free_agents_count = await fetch_api_data(cookie_input.value, league_input.value)
     injury_count = await scrape_injuries()
+
+    # Fetch 2025 stats for all players
+    players_data = json.loads(Path("data/players.json").read_text())
+    player_ids = [p["id"] for p in players_data]
+    last_year_stats_count = await fetch_last_year_stats(player_ids)
 
     con = duckdb.connect("database.duckdb")
     con.execute("""
@@ -127,13 +162,31 @@ async def _(
         t as (select unnest(t.success.teams, max_depth := 2) from 'data/teams.json' t),
         l as (select id, name, unnest(flatten([t.lineup.DEF, t.lineup.MID, t.lineup.FWD, t.lineup.RUC, t.lineup.FLX, t.bench, t.injuryReplacement])) as lineup from t),
         rfa as (select unnest(rfa.success.players, max_depth := 2) from 'data/free-agents.json' rfa),
-        i as (select i.* from 'data/injuries.json' i)
+        i as (select i.* from 'data/injuries.json' i),
+        last_year as (
+            select
+                cast(regexp_extract(filename, '(\d+)\.json$', 1) as integer) as player_id,
+                avg(
+                    kicks * 3 +
+                    handballs * 2 +
+                    marks * 3 +
+                    tackles * 4 +
+                    freesFor * 1 +
+                    freesAgainst * -3 +
+                    hitouts * 1 +
+                    goals * 6 +
+                    behinds * 1
+                ) as avg_points
+            from read_json('data/players/2025/*.json', filename=true, union_by_name=true)
+            group by player_id
+        )
 
         select
             p.id as id,
             p.firstName as firstName,
             p.lastName as lastName,
             p.stats.averagePoints as average,
+            round(last_year.avg_points, 1) as lastYearAvg,
             p.status as playingStatus,
             l.id as ownerId,
             rfa.restrictedTo as rfaDate,
@@ -143,9 +196,10 @@ async def _(
         left join rfa on p.id = rfa.playerId
         left join l on p.id = l.lineup
         left join i on i.name = concat(p.firstName, ' ', p.lastName)
+        left join last_year on p.id = last_year.player_id
     """)
 
-    mo.md(f"**Data refreshed.** {players_count} players, {teams_count} teams, {free_agents_count} free agents, {injury_count} injuries.")
+    mo.md(f"**Data refreshed.** {players_count} players, {teams_count} teams, {free_agents_count} free agents, {injury_count} injuries, {last_year_stats_count} last year stats.")
     return (con,)
 
 
