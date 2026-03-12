@@ -154,7 +154,7 @@ async def _(
     player_ids = [p["id"] for p in players_data]
     last_year_stats_count = await fetch_last_year_stats(player_ids)
 
-    con = duckdb.connect("database.duckdb")
+    con = duckdb.connect("database/database.duckdb")
     con.execute("""
         create or replace view players as
         with

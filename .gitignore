@@ -1,3 +1,4 @@
 data
-database.duckdb
+database
 .env
+__marimo__
