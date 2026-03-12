@@ -79,6 +79,7 @@ async def _(
         teams_data = teams.json()
         free_agents_data = free_agents.json()
 
+        Path("data").mkdir(exist_ok=True)
         Path("data/players.json").write_text(players.text)
         Path("data/teams.json").write_text(teams.text)
         Path("data/free-agents.json").write_text(free_agents.text)
@@ -154,6 +155,7 @@ async def _(
     player_ids = [p["id"] for p in players_data]
     last_year_stats_count = await fetch_last_year_stats(player_ids)
 
+    Path("database").mkdir(exist_ok=True)
     con = duckdb.connect("database/database.duckdb")
     con.execute("""
         create or replace view players as
