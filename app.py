@@ -155,6 +155,13 @@ async def _(
     player_ids = [p["id"] for p in players_data]
     last_year_stats_count = await fetch_last_year_stats(player_ids)
 
+    mo.md(f"**Data refreshed.** {players_count} players, {teams_count} teams, {free_agents_count} free agents, {injury_count} injuries, {last_year_stats_count} last year stats.")
+
+    return
+
+@app.cell
+def _(refresh_button):
+
     Path("database").mkdir(exist_ok=True)
     con = duckdb.connect("database/database.duckdb")
     con.execute("""
@@ -201,7 +208,6 @@ async def _(
         left join last_year on p.id = last_year.player_id
     """)
 
-    mo.md(f"**Data refreshed.** {players_count} players, {teams_count} teams, {free_agents_count} free agents, {injury_count} injuries, {last_year_stats_count} last year stats.")
     return (con,)
 
 
@@ -223,7 +229,7 @@ def _(con, mo):
 @app.cell
 def _(mo):
     mo.md("""
-    ## Playing (Available)
+    ## Playing
     """)
     return
 
@@ -244,7 +250,7 @@ def _(con, mo):
 @app.cell
 def _(mo):
     mo.md("""
-    ## Returning (Injured)
+    ## Injuries
     """)
     return
 
@@ -253,8 +259,7 @@ def _(mo):
 def _(con, mo):
     returning = con.execute("""
         select * from players
-        where injuryEta is not null and
-        ownerId is null
+        where injuryEta is not null
         order by average desc
     """).df()
     mo.ui.table(returning)
