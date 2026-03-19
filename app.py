@@ -170,7 +170,12 @@ def _(refresh_button):
         p as (select p.* from 'data/players.json' p),
         t as (select unnest(t.success.teams, max_depth := 2) from 'data/teams.json' t),
         l as (select id, name, unnest(flatten([t.lineup.DEF, t.lineup.MID, t.lineup.FWD, t.lineup.RUC, t.lineup.FLX, t.bench, t.injuryReplacement])) as lineup from t),
-        rfa as (select unnest(rfa.success.players, max_depth := 2) from 'data/free-agents.json' rfa),
+        rfa as (
+            select
+                (p->>'playerId')::integer as playerId,
+                p->>'restrictedTo' as restrictedTo
+            from (select unnest(rfa.success.players) as p from 'data/free-agents.json' rfa)
+        ),
         i as (select i.* from 'data/injuries.json' i),
         last_year as (
             select
